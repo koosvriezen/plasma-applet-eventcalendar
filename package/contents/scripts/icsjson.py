@@ -4,6 +4,10 @@ from icalendar import Calendar
 import json
 import urllib.parse
 import urllib.request
+try:
+	import recurring_ical_events
+except:
+	recurring_ical_events = None
 
 debugging=False
 def debug(*args):
@@ -132,10 +136,16 @@ if __name__ == '__main__':
 
 	url = urllib.parse.urlparse(args.url, scheme='file').geturl()
 
-	manager = CalendarManager(url)
 	if args.subcommand == 'query':
-		manager.read()
-		eventList = manager.query(args.startTime, args.endTime)
+		if recurring_ical_events:
+			with urllib.request.urlopen(url) as sock:
+				text = sock.read()
+				cal = Calendar.from_ical(text)
+				eventList = recurring_ical_events.of(cal).between(args.startTime, args.endTime)
+		else:
+			manager = CalendarManager(url)
+			manager.read()
+			eventList = manager.query(args.startTime, args.endTime)
 		print(eventsToJson(eventList))
 
 	elif args.subcommand == 'add':
